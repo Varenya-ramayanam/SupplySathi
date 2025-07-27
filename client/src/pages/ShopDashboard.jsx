@@ -11,7 +11,7 @@ const ShopDashboard = () => {
     price: '',
     quantity: '',
     expiryDate: '',
-    photoFile: null,
+    photoUrl: '', // ✅ image URL instead of file
   });
 
   const navigate = useNavigate();
@@ -26,35 +26,13 @@ const ShopDashboard = () => {
     }
   };
 
-  const handleImageUpload = async (file) => {
-  const formData = new FormData();
-  formData.append("image", file);
-
-  try {
-    const res = await API.post("/shop/upload", formData, {
-      headers: {
-        "Content-Type": "multipart/form-data",
-      },
-    });
-    return res.data.url;
-  } catch (err) {
-    console.error("Image upload failed:", err);
-    toast.error("Image upload failed");
-    return null;
-  }
-};
-
-
   const handleSubmit = async () => {
-    const { name, price, quantity, expiryDate, photoFile } = form;
+    const { name, price, quantity, expiryDate, photoUrl } = form;
 
-    if (!name || !price || !quantity || !expiryDate || !photoFile) {
-      toast.error('⚠️ Please fill out all fields and upload an image');
+    if (!name || !price || !quantity || !expiryDate || !photoUrl) {
+      toast.error('⚠️ Please fill out all fields and provide an image URL');
       return;
     }
-
-    const photoUrl = await handleImageUpload(photoFile);
-    if (!photoUrl) return;
 
     const productData = {
       name,
@@ -72,7 +50,7 @@ const ShopDashboard = () => {
         price: '',
         quantity: '',
         expiryDate: '',
-        photoFile: null,
+        photoUrl: '',
       });
       loadProducts();
     } catch (err) {
@@ -148,10 +126,11 @@ const ShopDashboard = () => {
             onChange={(e) => setForm({ ...form, expiryDate: e.target.value })}
           />
           <input
-            type="file"
-            accept="image/*"
+            type="text"
             className="bg-gray-700 text-white border border-gray-600 px-3 py-2 rounded col-span-2 md:col-span-1"
-            onChange={(e) => setForm({ ...form, photoFile: e.target.files[0] })}
+            placeholder="Image URL"
+            value={form.photoUrl}
+            onChange={(e) => setForm({ ...form, photoUrl: e.target.value })}
           />
           <button
             onClick={handleSubmit}

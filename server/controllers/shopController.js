@@ -33,7 +33,6 @@ exports.shopSignup = async (req, res) => {
   }
 };
 
-
 // ✅ Shop Login
 exports.shopLogin = async (req, res) => {
   try {
@@ -147,31 +146,3 @@ exports.getReviews = async (req, res) => {
     res.status(500).json({ message: 'Failed to fetch reviews', error: err.message });
   }
 };
-
-
-const cloudinary = require('cloudinary').v2;
-const fs = require('fs');
-
-// Configure cloudinary
-cloudinary.config({
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-  api_key: process.env.CLOUDINARY_API_KEY,
-  api_secret: process.env.CLOUDINARY_API_SECRET,
-});
-exports.uploadProductImage = async (req, res) => {
-  try {
-    console.log("📷 Uploaded file:", req.file);
-
-    if (!req.file || !req.file.path) {
-      return res.status(400).json({ message: 'No file uploaded' });
-    }
-
-    const url = req.file.path;
-    res.status(200).json({ url });
-  } catch (err) {
-    console.error('❌ Cloudinary Upload Failed:', err);
-    res.status(500).json({ message: 'Cloudinary upload failed', error: err.message });
-  }
-};
-
-
