@@ -149,23 +149,28 @@ exports.addToMemo = async (req, res) => {
       vendorTodo = new VendorTodo({ vendorId, items: [] });
     }
 
-    // Remove existing item for this product
-    vendorTodo.items = vendorTodo.items.filter(
+    // Check if item already exists
+    const existingItem = vendorTodo.items.find(
       item =>
-        !(
-          item.productName.toLowerCase() === productName.toLowerCase() &&
-          item.shopProductId?.toString() === shopProductId
-        )
+        item.productName.toLowerCase() === productName.toLowerCase() &&
+        item.shopProductId?.toString() === shopProductId
     );
 
-    // Push new item created by middleman
-    vendorTodo.items.push({
-      productName,
-      quantity,
-      status: "started_to_deliver",
-      shopProductId,
-      addedByMiddleman: true,
-    });
+    if (existingItem) {
+      // Update the existing item
+      existingItem.quantity = quantity; // or += quantity based on logic
+      existingItem.status = "started_to_deliver";
+      existingItem.addedByMiddleman = true;
+    } else {
+      // Only push new if not exists
+      vendorTodo.items.push({
+        productName,
+        quantity,
+        status: "started_to_deliver",
+        shopProductId,
+        addedByMiddleman: true,
+      });
+    }
 
     await vendorTodo.save();
 
@@ -188,7 +193,7 @@ exports.addToMemo = async (req, res) => {
     });
 
     res.status(200).json({
-      message: "Old item removed and new product added to memo",
+      message: "Item added or updated in vendor memo",
       delivery,
       updatedProduct,
     });

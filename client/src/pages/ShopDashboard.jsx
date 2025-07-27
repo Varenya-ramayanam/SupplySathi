@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import API from '../api';
 import { LogOut, Trash2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { toast } from 'react-hot-toast';
 
 const ShopDashboard = () => {
   const [products, setProducts] = useState([]);
@@ -10,7 +11,7 @@ const ShopDashboard = () => {
     price: '',
     quantity: '',
     expiryDate: '',
-    photoUrl: ''
+    photoFile: null,
   });
 
   const navigate = useNavigate();
@@ -21,21 +22,61 @@ const ShopDashboard = () => {
       setProducts(res.data);
     } catch (err) {
       console.error("Failed to fetch products", err);
+      toast.error("❌ Failed to fetch products");
+    }
+  };
+
+  const handleImageUpload = async (file) => {
+    const formData = new FormData();
+    formData.append("image", file);
+
+    try {
+      const res = await API.post("/shop/upload", formData, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      });
+      return res.data.url; // Cloudinary image URL
+    } catch (err) {
+      console.error("Image upload failed:", err);
+      toast.error("📷 Image upload failed");
+      return null;
     }
   };
 
   const handleSubmit = async () => {
-    const { name, price, quantity, expiryDate, photoUrl } = form;
-    if (!name || !price || !quantity || !expiryDate || !photoUrl) {
-      return alert('Please fill out all fields');
+    const { name, price, quantity, expiryDate, photoFile } = form;
+
+    if (!name || !price || !quantity || !expiryDate || !photoFile) {
+      toast.error('⚠️ Please fill out all fields and upload an image');
+      return;
     }
 
+    const photoUrl = await handleImageUpload(photoFile);
+    if (!photoUrl) return;
+
+    const productData = {
+      name,
+      price,
+      quantity,
+      expiryDate,
+      photoUrl,
+    };
+
     try {
-      await API.post('/shop/products', form);
-      setForm({ name: '', price: '', quantity: '', expiryDate: '', photoUrl: '' });
+      await API.post('/shop/products', productData);
+      toast.success("✅ Product added successfully");
+      setForm({
+        name: '',
+        price: '',
+        quantity: '',
+        expiryDate: '',
+        photoFile: null,
+      });
       loadProducts();
     } catch (err) {
       console.error("Error adding product", err);
+      toast.error("❌ Failed to add product");
     }
   };
 
@@ -45,15 +86,17 @@ const ShopDashboard = () => {
 
     try {
       await API.delete(`/shop/product/${id}`);
-      setProducts((prev) => prev.filter(p => p._id !== id)); // Immediate removal from UI
+      toast.success("🗑️ Product deleted");
+      setProducts((prev) => prev.filter(p => p._id !== id));
     } catch (err) {
       console.error("Failed to delete product", err);
-      alert("Failed to delete product");
+      toast.error("❌ Failed to delete product");
     }
   };
 
   const handleLogout = () => {
     localStorage.removeItem('token');
+    toast("👋 Logged out");
     navigate('/');
   };
 
@@ -104,10 +147,10 @@ const ShopDashboard = () => {
             onChange={(e) => setForm({ ...form, expiryDate: e.target.value })}
           />
           <input
+            type="file"
+            accept="image/*"
             className="bg-gray-700 text-white border border-gray-600 px-3 py-2 rounded col-span-2 md:col-span-1"
-            placeholder="Photo URL"
-            value={form.photoUrl}
-            onChange={(e) => setForm({ ...form, photoUrl: e.target.value })}
+            onChange={(e) => setForm({ ...form, photoFile: e.target.files[0] })}
           />
           <button
             onClick={handleSubmit}
@@ -129,13 +172,11 @@ const ShopDashboard = () => {
                 className="flex flex-col sm:flex-row sm:justify-between items-start sm:items-center bg-gray-700 border border-gray-600 px-4 py-3 rounded-lg shadow-sm transition hover:bg-gray-600"
               >
                 <div className="flex items-center gap-4">
-                  {/* Product Image */}
                   <img
                     src={p.photoUrl}
                     alt={p.name}
                     className="w-20 h-20 object-cover rounded border border-gray-500"
                   />
-                  {/* Product Info */}
                   <div>
                     <span className="font-semibold text-lg">{p.name}</span>
                     <div className="text-sm text-gray-300">
@@ -146,7 +187,6 @@ const ShopDashboard = () => {
                     </div>
                   </div>
                 </div>
-                {/* Delete Button */}
                 <button
                   onClick={() => handleDelete(p._id)}
                   className="text-red-400 hover:text-red-600 transition mt-3 sm:mt-0 sm:ml-4"

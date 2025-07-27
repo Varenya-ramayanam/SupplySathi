@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import API from '../api';
+import { toast } from 'react-hot-toast';
 
 const Login = () => {
   const navigate = useNavigate();
@@ -20,12 +21,20 @@ const Login = () => {
 
   const handleLogin = async (role) => {
     const { email, password } = forms[role];
+
+    if (!email || !password) {
+      toast.error("❗ Please enter both email and password");
+      return;
+    }
+
     try {
       const res = await API.post(`/${role}/login`, { email, password });
       localStorage.setItem('token', res.data.token);
+      toast.success(`✅ Logged in as ${role}`);
       navigate(`/${role}`);
     } catch (err) {
-      alert(`Login failed for ${role}`);
+      console.error(`Login failed for ${role}:`, err);
+      toast.error(`❌ Login failed for ${role}`);
     }
   };
 

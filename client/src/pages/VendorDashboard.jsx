@@ -2,12 +2,11 @@ import React, { useEffect, useState } from "react";
 import API from "../api";
 import { useNavigate } from "react-router-dom";
 import { Plus, ClipboardList, Trash2, PackageX, LogOut } from "lucide-react";
+import { toast } from "react-hot-toast";
 
 const VendorDashboard = () => {
   const [todos, setTodos] = useState([]);
   const [newItem, setNewItem] = useState({ productName: "", quantity: 1 });
-  const [error, setError] = useState("");
-  const [info, setInfo] = useState("");
   const navigate = useNavigate();
 
   const loadTodos = async () => {
@@ -16,31 +15,34 @@ const VendorDashboard = () => {
       setTodos(res.data.items || []);
     } catch (err) {
       console.error(err);
-      setError("Failed to load items.");
+      toast.error("❌ Failed to load items.");
     }
   };
 
   const addTodo = async () => {
     if (!newItem.productName.trim()) {
-      setError("Product name is required");
+      toast.error("⚠️ Product name is required.");
       return;
     }
     try {
       await API.post("/vendor/todo", newItem);
+      toast.success("✅ Item added successfully.");
       setNewItem({ productName: "", quantity: 1 });
       loadTodos();
     } catch (err) {
       console.error(err);
-      setError("Failed to add item.");
+      toast.error("❌ Failed to add item.");
     }
   };
 
   const deleteItem = async (id) => {
     try {
       await API.delete(`/vendor/todo/${id}`);
+      toast.success("🗑️ Item deleted.");
       loadTodos();
     } catch (err) {
       console.error(err);
+      toast.error("❌ Failed to delete item.");
     }
   };
 
@@ -50,9 +52,10 @@ const VendorDashboard = () => {
       try {
         await API.delete("/vendor/todo");
         setTodos([]);
+        toast.success("🗑️ All items deleted.");
       } catch (error) {
         console.error("Failed to delete all items:", error);
-        alert("Something went wrong while deleting.");
+        toast.error("❌ Something went wrong while deleting.");
       }
     }
   };
@@ -73,7 +76,7 @@ const VendorDashboard = () => {
       );
 
       if (!matchingDelivery) {
-        alert("No matching delivery found.");
+        toast.error("❌ No matching delivery found.");
         return;
       }
 
@@ -81,7 +84,7 @@ const VendorDashboard = () => {
 
       const rating = prompt("Please rate the product (1-5 stars):");
       if (!rating || isNaN(rating) || rating < 1 || rating > 5) {
-        alert("Invalid rating. Review not submitted.");
+        toast.error("⚠️ Invalid rating. Review not submitted.");
         return;
       }
 
@@ -95,11 +98,11 @@ const VendorDashboard = () => {
         productQuality: "good",
       });
 
-      alert("Review submitted successfully.");
+      toast.success("🌟 Review submitted successfully.");
       loadTodos();
     } catch (err) {
       console.error("Error confirming delivery:", err);
-      alert("Failed to confirm delivery");
+      toast.error("❌ Failed to confirm delivery.");
     }
   };
 
@@ -168,9 +171,6 @@ const VendorDashboard = () => {
           </button>
         </div>
 
-        {error && <p className="text-red-400 mb-4">{error}</p>}
-        {info && <div className="text-yellow-400 mt-2">{info}</div>}
-
         {/* Todo List */}
         {todos.length === 0 ? (
           <div className="text-center text-gray-400 mt-10">
@@ -202,9 +202,9 @@ const VendorDashboard = () => {
                       <button
                         className="text-sm text-red-400 underline"
                         onClick={() =>
-                          alert(
-                            "Marking as not received. Please contact middleman."
-                          )
+                          toast("Please contact middleman for delivery issues.", {
+                            icon: "🚚",
+                          })
                         }
                       >
                         Not Received

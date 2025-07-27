@@ -19,6 +19,7 @@ app.use(express.json());
 app.use(cors());
 
 
+
 // Routes
 app.use('/api/vendor',vendorRoutes);
 app.use('/api/shop', require('./routes/shopRoutes'));

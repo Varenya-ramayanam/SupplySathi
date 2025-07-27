@@ -147,3 +147,33 @@ exports.getReviews = async (req, res) => {
     res.status(500).json({ message: 'Failed to fetch reviews', error: err.message });
   }
 };
+
+
+const cloudinary = require('cloudinary').v2;
+const fs = require('fs');
+
+// Configure cloudinary
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
+});
+
+// ✅ Image Upload Controller
+exports.uploadProductImage = async (req, res) => {
+  try {
+    const localFilePath = req.file.path;
+
+    const result = await cloudinary.uploader.upload(localFilePath, {
+      folder: 'supply_sathi_products',
+    });
+
+    // Delete the uploaded file from local storage
+    fs.unlinkSync(localFilePath);
+
+    res.status(200).json({ url: result.secure_url });
+  } catch (err) {
+    console.error('❌ Image upload failed:', err);
+    res.status(500).json({ message: 'Cloudinary upload failed', error: err.message });
+  }
+};
