@@ -158,16 +158,20 @@ cloudinary.config({
   api_key: process.env.CLOUDINARY_API_KEY,
   api_secret: process.env.CLOUDINARY_API_SECRET,
 });
-
 exports.uploadProductImage = async (req, res) => {
   try {
+    console.log("📷 Uploaded file:", req.file);
+
     if (!req.file || !req.file.path) {
       return res.status(400).json({ message: 'No file uploaded' });
     }
 
-    res.status(200).json({ url: req.file.path }); // This is Cloudinary URL
+    const url = req.file.path;
+    res.status(200).json({ url });
   } catch (err) {
-    console.error('❌ Image upload failed:', err);
+    console.error('❌ Cloudinary Upload Failed:', err);
     res.status(500).json({ message: 'Cloudinary upload failed', error: err.message });
   }
 };
+
+

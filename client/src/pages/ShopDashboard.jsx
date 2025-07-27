@@ -27,22 +27,23 @@ const ShopDashboard = () => {
   };
 
   const handleImageUpload = async (file) => {
-    const formData = new FormData();
-    formData.append("image", file);
+  const formData = new FormData();
+  formData.append("image", file);
 
-    try {
-      const res = await API.post("/shop/upload", formData, {
-        headers: {
-          "Content-Type": "multipart/form-data",
-        },
-      });
-      return res.data.url; // Cloudinary image URL
-    } catch (err) {
-      console.error("Image upload failed:", err);
-      toast.error("📷 Image upload failed");
-      return null;
-    }
-  };
+  try {
+    const res = await API.post("/shop/upload", formData, {
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+    });
+    return res.data.url;
+  } catch (err) {
+    console.error("Image upload failed:", err);
+    toast.error("Image upload failed");
+    return null;
+  }
+};
+
 
   const handleSubmit = async () => {
     const { name, price, quantity, expiryDate, photoFile } = form;

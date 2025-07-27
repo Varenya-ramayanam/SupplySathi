@@ -5,7 +5,7 @@ const auth = require('../middleware/authMiddleware');
 const ShopOwner = require('../models/ShopOwner');
 
 const multer = require('multer');
-const upload = multer({ dest: 'uploads/' });
+const upload = multer();
 
 router.post('/signup', ctrl.shopSignup);
 router.post('/login', ctrl.shopLogin);
@@ -17,6 +17,6 @@ router.delete('/product/:id', auth(ShopOwner), ctrl.deleteProduct);
 router.get('/reviews/:id', auth(ShopOwner), ctrl.getReviews);
 
 // ✅ New Route to Upload Image
-router.post('/upload', auth(ShopOwner), upload.single('image'), ctrl.uploadProductImage);
+router.post('/upload', auth, upload.single('image'), shopController.uploadProductImage);
 
 module.exports = router;
