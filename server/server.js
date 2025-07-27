@@ -3,6 +3,8 @@ const mongoose = require('mongoose');
 const dotenv = require('dotenv');
 const cors = require('cors');
 const connectToDb = require('./config/db');
+const reviewRoutes = require('./routes/reviews');
+
 
 const vendorRoutes = require("./routes/vendorRoutes");
 
@@ -16,10 +18,12 @@ connectToDb();
 app.use(express.json());
 app.use(cors());
 
+
 // Routes
 app.use('/api/vendor',vendorRoutes);
 app.use('/api/shop', require('./routes/shopRoutes'));
 app.use('/api/middleman', require('./routes/middlemanRoutes'));
+app.use('/api/reviews', reviewRoutes);
 
   
 app.get('/', (req, res) => {

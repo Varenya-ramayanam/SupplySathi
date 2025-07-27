@@ -12,5 +12,7 @@ router.get('/available-products', auth(Middleman), ctrl.getAvailableProducts);
 router.post('/deliver', auth(Middleman), ctrl.initiateDelivery);
 router.put('/verify/:id', auth(Middleman), ctrl.updateDeliveryStatus);
 router.get('/deliveries', auth(Middleman), ctrl.getMyDeliveries);
+router.post('/add-to-memo', auth(Middleman), ctrl.addToMemo);
+router.patch('/delivery/:deliveryId', auth(Middleman), ctrl.updateDeliveryStatus);
 
 module.exports = router;

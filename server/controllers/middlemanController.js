@@ -30,8 +30,7 @@ exports.getProfile = (req, res) => {
 exports.getVendorRequests = async (req, res) => {
   try {
     const todos = await VendorTodo.find().populate('vendorId');
-    
-    // Flatten to return each item as a separate record with vendor info
+
     const allItems = todos.flatMap(todo =>
       todo.items.map(item => ({
         _id: item._id,
@@ -48,7 +47,6 @@ exports.getVendorRequests = async (req, res) => {
   }
 };
 
-
 exports.getAvailableProducts = async (req, res) => {
   try {
     const products = await Product.find().populate('shopOwnerId', 'name shopName');
@@ -58,7 +56,6 @@ exports.getAvailableProducts = async (req, res) => {
     res.status(500).json({ message: 'Failed to fetch products' });
   }
 };
-
 
 exports.initiateDelivery = async (req, res) => {
   const { vendorId, shopId, productId, quantity } = req.body;
@@ -84,3 +81,77 @@ exports.getMyDeliveries = async (req, res) => {
   const deliveries = await Delivery.find({ middlemanId: req.user._id });
   res.json(deliveries);
 };
+
+// ✅ Updated: Add matched product to vendor's memo and remove it from availability
+// Updated logic: reduce product quantity instead of deleting
+exports.addToMemo = async (req, res) => {
+  const { vendorId, productName, quantity, shopProductId } = req.body;
+
+  console.log("🧪 Incoming data:", { vendorId, productName, quantity, shopProductId });
+
+  try {
+    const product = await Product.findById(shopProductId);
+    if (!product) {
+      return res.status(404).json({ message: "Product not found" });
+    }
+
+    // Check quantity
+    if (product.quantity < quantity) {
+      return res.status(400).json({ message: "Not enough quantity available" });
+    }
+
+    // Find or create vendor todo
+    let vendorTodo = await VendorTodo.findOne({ vendorId });
+    if (!vendorTodo) {
+      vendorTodo = new VendorTodo({ vendorId, items: [] });
+    }
+
+    const alreadyExists = vendorTodo.items.some(
+      item =>
+        item.productName.toLowerCase() === productName.toLowerCase() &&
+        item.shopProductId?.toString() === shopProductId
+    );
+    if (alreadyExists) {
+      return res.status(409).json({ message: "Product already added to memo" });
+    }
+
+    vendorTodo.items.push({
+      productName,
+      quantity,
+      status: "started_to_deliver",
+      shopProductId,
+      addedByMiddleman: true,
+    });
+
+    await vendorTodo.save();
+
+    // Decrease quantity instead of deleting
+    product.quantity -= quantity;
+    let updatedProduct = null;
+
+    if (product.quantity <= 0) {
+      await Product.findByIdAndDelete(shopProductId);
+    } else {
+      updatedProduct = await product.save();
+    }
+
+    const delivery = await Delivery.create({
+      vendorId,
+      productId: shopProductId,
+      quantity,
+      middlemanId: req.user._id,
+      status: "started_to_deliver",
+    });
+
+    res.status(200).json({
+      message: "✅ Added to vendor memo and delivery started.",
+      delivery,
+      updatedProduct,
+    });
+  } catch (error) {
+    console.error("🔥 Error in addToMemo:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+

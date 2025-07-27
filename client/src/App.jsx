@@ -6,6 +6,7 @@ import ShopDashboard from './pages/ShopDashboard';
 import MiddlemanDashboard from './pages/MiddlemanDashboard';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
+import ReviewForm from './pages/ReviewForm';
 
 function App() {
   return (
@@ -15,6 +16,7 @@ function App() {
       <Route path="/vendor" element={<VendorDashboard />} />
       <Route path="/shop" element={<ShopDashboard />} />
       <Route path="/middleman" element={<MiddlemanDashboard />} />
+      <Route path="/vendor/review/:deliveryId" element={<ReviewForm />} />
     </Routes>
   );
 }

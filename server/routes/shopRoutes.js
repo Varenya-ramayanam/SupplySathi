@@ -13,4 +13,5 @@ router.put('/product/:id', auth(ShopOwner), ctrl.updateProduct);
 router.delete('/product/:id', auth(ShopOwner), ctrl.deleteProduct);
 router.get('/reviews/:id', auth(ShopOwner), ctrl.getReviews);
 
+
 module.exports = router;
