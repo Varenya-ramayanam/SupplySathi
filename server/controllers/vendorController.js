@@ -1,9 +1,9 @@
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const VendorTodo = require('../models/VendorTodo');
-const Delivery = require('../models/delivery');
-const Review = require('../models/review');
-const Product = require('../models/product');
+const Delivery = require('../models/Delivery');
+const Review = require('../models/Review');
+const Product = require('../models/Rroduct');
 const StreetVendor = require('../models/StreetVendor');
 
 // 🔐 Vendor Signup
