@@ -159,19 +159,13 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
-// ✅ Image Upload Controller
 exports.uploadProductImage = async (req, res) => {
   try {
-    const localFilePath = req.file.path;
+    if (!req.file || !req.file.path) {
+      return res.status(400).json({ message: 'No file uploaded' });
+    }
 
-    const result = await cloudinary.uploader.upload(localFilePath, {
-      folder: 'supply_sathi_products',
-    });
-
-    // Delete the uploaded file from local storage
-    fs.unlinkSync(localFilePath);
-
-    res.status(200).json({ url: result.secure_url });
+    res.status(200).json({ url: req.file.path }); // This is Cloudinary URL
   } catch (err) {
     console.error('❌ Image upload failed:', err);
     res.status(500).json({ message: 'Cloudinary upload failed', error: err.message });
