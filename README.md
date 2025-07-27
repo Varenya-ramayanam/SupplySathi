@@ -3,6 +3,9 @@
 
 **SupplySathi** is a smart supply management platform designed specifically for **street food vendors** and **local shop owners**. Built with the **MERN stack**, it helps vendors find **affordable, quality raw materials**, especially **bulk and near-expiry products**, while allowing shopkeepers to manage and sell surplus stock efficiently.
 
+
+SupplySathi is a real-time supply management platform where street food vendors can post their daily raw material needs as a simple to-do list, while local shop owners list available products with expiry dates, prices, and images. The platform automatically matches vendor requirements with nearby shop inventories, highlighting near-expiry products at discounted rates. Vendors can view product reviews to ensure quality before placing orders. Once an order is confirmed, delivery progresses through live status updates — from pending to delivered — giving vendors full visibility. After delivery, vendors can rate products and shops, enabling review-based quality control. This entire ecosystem runs in real time, empowering vendors to buy cheap and clean supplies quickly, while helping shopkeepers avoid waste and boost sales.
+
 ---
 
 ## 📌 Problem Statement
