@@ -3,6 +3,7 @@ const router = express.Router();
 const ctrl = require('../controllers/shopController');
 const auth = require('../middleware/authMiddleware');
 const upload = require('../middleware/upload'); // ✅ Use Cloudinary
+const ShopOwner = require('../models/ShopOwner'); // ✅ ADD THIS LINE
 
 router.post('/signup', ctrl.shopSignup);
 router.post('/login', ctrl.shopLogin);
