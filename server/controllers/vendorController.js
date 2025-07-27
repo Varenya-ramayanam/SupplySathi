@@ -3,7 +3,7 @@ const jwt = require('jsonwebtoken');
 const VendorTodo = require('../models/VendorTodo');
 const Delivery = require('../models/Delivery');
 const Review = require('../models/Review');
-const Product = require('../models/Rroduct');
+const Product = require('../models/Product');
 const StreetVendor = require('../models/StreetVendor');
 
 // 🔐 Vendor Signup
