@@ -57,50 +57,46 @@ const VendorDashboard = () => {
     }
   };
 
-  const confirmDelivery = async (itemId) => {
-    const confirm = window.confirm("Has this item been delivered?");
+  const handleReceived = async (item) => {
+    const confirm = window.confirm("Have you received this item?");
     if (!confirm) return;
-    try {
-      await API.post(`/vendor/confirm-delivery/${itemId}`);
-      alert("Thank you! Please leave a review.");
-      navigate(`/vendor/review/${itemId}`);
-    } catch (err) {
-      console.error("Error confirming delivery", err);
-      alert("Failed to confirm delivery");
-    }
-  };
 
-  const handleReached = async (item) => {
     try {
-      console.log('🔍 Debug: handleReached called with item:', item);
-      
-      // TEMPORARY: Use a hardcoded delivery ID for testing
-      // In production, this should fetch the actual delivery
-      const testDeliveryId = '507f1f77bcf86cd799439011'; // Replace with a real delivery ID from your database
-      console.log('🔍 Debug: using test delivery ID:', testDeliveryId);
-      navigate(`/vendor/review/${testDeliveryId}`);
-      
-      /* Original code (commented out for now):
-      const res = await API.get('/vendor/deliveries');
-      console.log('🔍 Debug: deliveries response:', res.data);
-      const deliveries = res.data.deliveries || res.data || [];
-      console.log('🔍 Debug: all deliveries:', deliveries);
-      const delivery = deliveries.find(
-        d => d.productId === item.shopProductId && d.status === 'started_to_deliver'
+      const deliveryRes = await API.get('/vendor/deliveries');
+      const deliveries = deliveryRes.data.deliveries || [];
+
+      const matchingDelivery = deliveries.find(
+        (d) => d.productId === item.shopProductId && d.status === 'started_to_deliver'
       );
-      console.log('🔍 Debug: found delivery:', delivery);
-      console.log('🔍 Debug: item.shopProductId:', item.shopProductId);
-      if (delivery) {
-        console.log('🔍 Debug: navigating to review with delivery ID:', delivery._id);
-        navigate(`/vendor/review/${delivery._id}`);
-      } else {
-        console.log('🔍 Debug: no delivery found');
-        setInfo('No delivery found for this item.');
+
+      if (!matchingDelivery) {
+        alert("No matching delivery found.");
+        return;
       }
-      */
+
+      await API.patch(`/vendor/delivery/${matchingDelivery._id}/reached`);
+
+      // Ask for review inline instead of navigating
+      const rating = prompt("Please rate the product (1-5 stars):");
+      if (!rating || isNaN(rating) || rating < 1 || rating > 5) {
+        alert("Invalid rating. Review not submitted.");
+        return;
+      }
+      const comment = prompt("Any comments or suggestions?") || "";
+
+      await API.post('/vendor/review', {
+        productId: matchingDelivery.productId,
+        rating: Number(rating),
+        comment,
+        productQuality: 'good'
+      });
+
+      alert("Review submitted successfully.");
+      loadTodos();
+
     } catch (err) {
-      console.error('🔍 Debug: error in handleReached:', err);
-      setInfo('Error fetching delivery.');
+      console.error("Error confirming delivery:", err);
+      alert("Failed to confirm delivery");
     }
   };
 
@@ -184,23 +180,27 @@ const VendorDashboard = () => {
                 <div>
                   <span className="font-semibold text-lg">{item.productName}</span>
                   <div className="text-sm text-gray-300">Qty: {item.quantity}</div>
-                  {item.status === 'started_to_deliver' && (
+                  {item.status === 'started_to_deliver' && !item.reviewGiven && (
                     <div className="mt-1 flex gap-2">
                       <button
                         className="text-sm text-green-400 underline"
-                        onClick={() => handleReached(item)}
+                        onClick={() => handleReceived(item)}
                       >
-                        Reached
+                        Received
                       </button>
                       <button
                         className="text-sm text-red-400 underline"
-                        onClick={() => alert('Please contact your middleman if there is an issue with delivery.')}
+                        onClick={() => alert('Marking as not received. Please contact middleman.')}
                       >
-                        Unreached
+                        Not Received
                       </button>
                     </div>
                   )}
+                  {item.reviewGiven && (
+                    <div className="text-sm text-yellow-300 mt-1">✅ Received and Reviewed</div>
+                  )}
                 </div>
+
                 <button
                   onClick={() => deleteItem(item._id)}
                   className="text-red-400 hover:text-red-600 transition"

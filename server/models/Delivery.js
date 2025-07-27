@@ -1,32 +1,57 @@
 const mongoose = require('mongoose');
 
 const deliverySchema = new mongoose.Schema({
-  vendorId: { type: mongoose.Schema.Types.ObjectId, ref: 'StreetVendor', required: true },
-  shopId: { type: mongoose.Schema.Types.ObjectId, ref: 'ShopOwner', required: true },
-  productId: { type: mongoose.Schema.Types.ObjectId, ref: 'Product', required: true },
-  quantity: { type: Number, required: true, default: 1 },
-
-  middlemanId: { type: mongoose.Schema.Types.ObjectId, ref: 'Middleman', required: true },
-
+  vendorId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'StreetVendor',
+    required: true,
+  },
+  shopId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'ShopOwner',
+    required: true,
+  },
+  productId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Product',
+    required: true,
+  },
+  quantity: {
+    type: Number,
+    required: true,
+    default: 1,
+    min: 1,
+  },
+  middlemanId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Middleman',
+    required: true,
+  },
   status: {
     type: String,
     enum: ['in_progress', 'started_to_deliver', 'reached', 'reviewed'],
     default: 'in_progress',
-    required: true
+    required: true,
   },
-
-  verifiedByMiddleman: { type: Boolean, default: false },
-
-  // Optional notes or comments related to delivery or issues found
-  notes: { type: String, default: '' },
-
-  // Store timestamp when delivery status changed to reached or reviewed (optional)
-  reachedAt: { type: Date },
-  reviewedAt: { type: Date },
+  verifiedByMiddleman: {
+    type: Boolean,
+    default: false,
+  },
+  notes: {
+    type: String,
+    default: '',
+    trim: true,
+  },
+  reachedAt: {
+    type: Date,
+  },
+  reviewedAt: {
+    type: Date,
+  },
 }, { timestamps: true });
 
-// Middleware to update reachedAt and reviewedAt timestamps on status change
-deliverySchema.pre('save', function(next) {
+// Auto-update timestamps when status changes
+deliverySchema.pre('save', function (next) {
   if (this.isModified('status')) {
     if (this.status === 'reached' && !this.reachedAt) {
       this.reachedAt = new Date();

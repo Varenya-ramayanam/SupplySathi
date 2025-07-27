@@ -1,3 +1,4 @@
+// ✅ Updated: controllers/shopController.js
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const ShopOwner = require('../models/ShopOwner');
@@ -26,10 +27,45 @@ exports.getProfile = (req, res) => {
   res.json(req.user);
 };
 
+// ✅ Updated function: merge if shop+name exists, else add new
 exports.addProduct = async (req, res) => {
-  const data = req.body;
-  const product = await Product.create({ ...data, shopOwnerId: req.user._id });
-  res.status(201).json(product);
+  const { name, description, price, quantity, photoUrl, expiryDate } = req.body;
+  try {
+    let existingProduct = await Product.findOne({
+      name: name.trim().toLowerCase(),
+      shopOwnerId: req.user._id,
+    });
+
+    if (existingProduct) {
+      existingProduct.quantity += parseInt(quantity);
+      existingProduct.price = price;
+      existingProduct.photoUrl = photoUrl;
+      existingProduct.expiryDate = expiryDate;
+      await existingProduct.save();
+      return res.status(200).json({
+        message: "Product quantity updated",
+        product: existingProduct,
+      });
+    }
+
+    const product = await Product.create({
+      name: name.trim().toLowerCase(),
+      description,
+      price,
+      quantity,
+      photoUrl,
+      expiryDate,
+      shopOwnerId: req.user._id,
+    });
+
+    res.status(201).json({
+      message: "New product added",
+      product,
+    });
+  } catch (err) {
+    console.error("❌ Error adding product:", err);
+    res.status(500).json({ message: "Server error" });
+  }
 };
 
 exports.getMyProducts = async (req, res) => {

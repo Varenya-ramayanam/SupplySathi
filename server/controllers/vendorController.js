@@ -4,6 +4,7 @@ const StreetVendor = require('../models/StreetVendor');
 const VendorTodo = require('../models/VendorTodo');
 const Review = require('../models/Review');
 const Delivery = require('../models/Delivery');
+const Product = require('../models/Product');
 
 // Vendor Signup
 exports.vendorSignup = async (req, res) => {
@@ -14,7 +15,6 @@ exports.vendorSignup = async (req, res) => {
     if (existing) return res.status(400).json({ message: 'Email already exists' });
 
     const hashed = await bcrypt.hash(password, 10);
-
     const vendor = await StreetVendor.create({ name, email, password: hashed });
 
     res.status(201).json(vendor);
@@ -37,7 +37,6 @@ exports.vendorLogin = async (req, res) => {
     const token = jwt.sign({ id: vendor._id, role: 'vendor' }, process.env.JWT_SECRET, { expiresIn: '1d' });
     res.json({ token });
   } catch (err) {
-    console.error('Vendor login error:', err);
     res.status(500).json({ message: 'Server error' });
   }
 };
@@ -75,7 +74,7 @@ exports.getTodoItems = async (req, res) => {
   }
 };
 
-// Update todo item status or reviewGiven
+// Update todo item
 exports.updateTodoItem = async (req, res) => {
   try {
     const { id } = req.params;
@@ -123,10 +122,12 @@ exports.deleteAllTodoItems = async (req, res) => {
   }
 };
 
-// Add a review
+// Add a review and update product's average rating
 exports.addReview = async (req, res) => {
   try {
     const { productId, rating, comment, productQuality } = req.body;
+
+    // Save review
     const review = await Review.create({
       vendorId: req.user._id,
       productId,
@@ -134,6 +135,20 @@ exports.addReview = async (req, res) => {
       comment,
       productQuality,
     });
+
+    // Update product's average rating
+    const reviews = await Review.find({ productId });
+    const total = reviews.reduce((sum, r) => sum + r.rating, 0);
+    const avg = total / reviews.length;
+
+    await Product.findByIdAndUpdate(productId, { averageRating: avg });
+
+    // Update the item to mark review given
+    await VendorTodo.updateOne(
+      { vendorId: req.user._id, "items.shopProductId": productId },
+      { $set: { "items.$.reviewGiven": true } }
+    );
+
     res.status(201).json(review);
   } catch (err) {
     res.status(500).json({ message: 'Error adding review', error: err.message });
@@ -170,21 +185,30 @@ exports.updateDeliveryStatus = async (req, res) => {
   }
 };
 
-// Confirm delivery reached (alternative endpoint)
+// Confirm delivery reached and update todo item status
 exports.confirmDeliveryReached = async (req, res) => {
   try {
     const { id } = req.params;
+
     const delivery = await Delivery.findOne({ _id: id, vendorId: req.user._id });
     if (!delivery) return res.status(404).json({ message: 'Delivery not found' });
 
     delivery.status = 'reached';
+    delivery.reachedAt = new Date();
     await delivery.save();
 
-    res.json({ message: 'Delivery status updated to reached' });
+    // Also update the todo item's status
+    await VendorTodo.updateOne(
+      { vendorId: req.user._id, "items.shopProductId": delivery.productId },
+      { $set: { "items.$.status": "reached" } }
+    );
+
+    res.json({ message: 'Delivery marked as reached' });
   } catch (err) {
     res.status(500).json({ message: 'Server error confirming delivery reached', error: err.message });
   }
 };
+
 
 // Get all deliveries for the vendor
 exports.getAllDeliveries = async (req, res) => {
