@@ -12,4 +12,4 @@ const productSchema = new mongoose.Schema({
   accepted: { type: Boolean, default: false }, // ✅ when fully taken
 });
 
-module.exports = mongoose.model('Product', productSchema);
+module.exports = mongoose.models.Product || mongoose.model('Product', productSchema);

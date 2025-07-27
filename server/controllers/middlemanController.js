@@ -5,18 +5,29 @@ const VendorTodo = require("../models/VendorTodo");
 const Product = require("../models/Product");
 const Delivery = require("../models/Delivery");
 
-// Signup
 exports.middlemanSignup = async (req, res) => {
-  const { name, email, password, godownAddress } = req.body;
   try {
-    const existing = await Middleman.findOne({ email });
-    if (existing) return res.status(400).json({ message: "Email already exists." });
+    const { name, email, password, godownAddress, phone } = req.body;
+
+    if (!name || !email || !password || !godownAddress || !phone) {
+      return res.status(400).json({ message: "All fields are required." });
+    }
+
+    const existing = await Middleman.findOne({ $or: [{ email }, { phone }] });
+    if (existing) return res.status(400).json({ message: "Email or phone already exists." });
 
     const hashed = await bcrypt.hash(password, 10);
-    const user = await Middleman.create({ name, email, password: hashed, godownAddress });
+    const user = await Middleman.create({
+      name,
+      email,
+      password: hashed,
+      godownAddress,
+      phone,
+    });
 
-    res.status(201).json(user);
+    res.status(201).json({ message: "Signup successful", user });
   } catch (error) {
+    console.error("Middleman signup error:", error);
     res.status(500).json({ message: "Signup error", error: error.message });
   }
 };
@@ -134,17 +145,20 @@ exports.addToMemo = async (req, res) => {
     }
 
     let vendorTodo = await VendorTodo.findOne({ vendorId });
-    if (!vendorTodo) vendorTodo = new VendorTodo({ vendorId, items: [] });
-
-    const alreadyExists = vendorTodo.items.some(
-      item =>
-        item.productName.toLowerCase() === productName.toLowerCase() &&
-        item.shopProductId?.toString() === shopProductId
-    );
-    if (alreadyExists) {
-      return res.status(409).json({ message: "Product already in memo" });
+    if (!vendorTodo) {
+      vendorTodo = new VendorTodo({ vendorId, items: [] });
     }
 
+    // Remove existing item for this product
+    vendorTodo.items = vendorTodo.items.filter(
+      item =>
+        !(
+          item.productName.toLowerCase() === productName.toLowerCase() &&
+          item.shopProductId?.toString() === shopProductId
+        )
+    );
+
+    // Push new item created by middleman
     vendorTodo.items.push({
       productName,
       quantity,
@@ -174,11 +188,14 @@ exports.addToMemo = async (req, res) => {
     });
 
     res.status(200).json({
-      message: "Product added to memo & delivery started",
+      message: "Old item removed and new product added to memo",
       delivery,
       updatedProduct,
     });
   } catch (error) {
+    console.error("Error adding to memo:", error);
     res.status(500).json({ message: "Error adding to memo", error: error.message });
   }
 };
+
+

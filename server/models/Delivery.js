@@ -1,66 +1,19 @@
 const mongoose = require('mongoose');
 
 const deliverySchema = new mongoose.Schema({
-  vendorId: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'StreetVendor',
-    required: true,
-  },
-  shopId: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'ShopOwner',
-    required: true,
-  },
-  productId: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Product',
-    required: true,
-  },
-  quantity: {
-    type: Number,
-    required: true,
-    default: 1,
-    min: 1,
-  },
-  middlemanId: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Middleman',
-    required: true,
-  },
+  vendorId: { type: mongoose.Schema.Types.ObjectId, ref: 'StreetVendor', required: true },
+  shopId: { type: mongoose.Schema.Types.ObjectId, ref: 'ShopOwner', required: true },
+  productId: { type: mongoose.Schema.Types.ObjectId, ref: 'Product', required: true },
+  quantity: { type: Number, required: true },
+  middlemanId: { type: mongoose.Schema.Types.ObjectId, ref: 'Middleman' },
+  deliveryDate: { type: Date },
   status: {
     type: String,
-    enum: ['in_progress', 'started_to_deliver', 'reached', 'reviewed'],
-    default: 'in_progress',
-    required: true,
+    enum: ['in_progress', 'started_to_deliver', 'delivered', 'cancelled'],
+    default: 'in_progress'
   },
-  verifiedByMiddleman: {
-    type: Boolean,
-    default: false,
-  },
-  notes: {
-    type: String,
-    default: '',
-    trim: true,
-  },
-  reachedAt: {
-    type: Date,
-  },
-  reviewedAt: {
-    type: Date,
-  },
+  verifiedByMiddleman: { type: Boolean, default: false },
+  notes: { type: String }
 }, { timestamps: true });
 
-// Auto-update timestamps when status changes
-deliverySchema.pre('save', function (next) {
-  if (this.isModified('status')) {
-    if (this.status === 'reached' && !this.reachedAt) {
-      this.reachedAt = new Date();
-    }
-    if (this.status === 'reviewed' && !this.reviewedAt) {
-      this.reviewedAt = new Date();
-    }
-  }
-  next();
-});
-
-module.exports = mongoose.model('Delivery', deliverySchema);
+module.exports = mongoose.models.Delivery || mongoose.model('Delivery', deliverySchema);

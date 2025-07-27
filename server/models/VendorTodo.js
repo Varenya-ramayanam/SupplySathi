@@ -13,7 +13,7 @@ const itemSchema = new mongoose.Schema({
   },
   status: {
     type: String,
-    enum: ['pending', 'delivered', 'rejected', 'available', 'started_to_deliver'], // ✅ Added here
+    enum: ['pending', 'delivered', 'rejected', 'available', 'started_to_deliver','reached'], // ✅ Added here
     default: 'pending'
   },
   deliveryDate: {
@@ -42,4 +42,4 @@ const vendorTodoSchema = new mongoose.Schema({
   items: [itemSchema]
 }, { timestamps: true });
 
-module.exports = mongoose.model('VendorTodo', vendorTodoSchema);
+module.exports = mongoose.models.VendorTodo || mongoose.model('VendorTodo', vendorTodoSchema);

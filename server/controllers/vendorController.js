@@ -1,221 +1,177 @@
-const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
+const VendorTodo = require('../models/vendorTodo');
+const Delivery = require('../models/delivery');
+const Review = require('../models/review');
+const Product = require('../models/product');
 const StreetVendor = require('../models/StreetVendor');
-const VendorTodo = require('../models/VendorTodo');
-const Review = require('../models/Review');
-const Delivery = require('../models/Delivery');
-const Product = require('../models/Product');
 
-// Vendor Signup
+// 🔐 Vendor Signup
 exports.vendorSignup = async (req, res) => {
   try {
-    const { name, email, password } = req.body;
+    const { name, email, password, phone } = req.body;
+    const existingVendor = await StreetVendor.findOne({ email });
+    if (existingVendor) return res.status(400).json({ error: 'Vendor already exists' });
 
-    const existing = await StreetVendor.findOne({ email });
-    if (existing) return res.status(400).json({ message: 'Email already exists' });
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const vendor = await StreetVendor.create({
+      name,
+      email,
+      password: hashedPassword,
+      phone
+    });
 
-    const hashed = await bcrypt.hash(password, 10);
-    const vendor = await StreetVendor.create({ name, email, password: hashed });
-
-    res.status(201).json(vendor);
+    res.status(201).json({ message: 'Vendor created successfully' });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ message: 'Signup failed', error: err.message });
   }
 };
 
-// Vendor Login
+// 🔐 Vendor Login
 exports.vendorLogin = async (req, res) => {
-  const { email, password } = req.body;
-
   try {
+    const { email, password } = req.body;
     const vendor = await StreetVendor.findOne({ email });
-    if (!vendor) return res.status(400).json({ message: 'User not found' });
+    if (!vendor) return res.status(404).json({ error: 'Vendor not found' });
 
     const isMatch = await bcrypt.compare(password, vendor.password);
-    if (!isMatch) return res.status(400).json({ message: 'Invalid credentials' });
+    if (!isMatch) return res.status(401).json({ error: 'Invalid credentials' });
 
-    const token = jwt.sign({ id: vendor._id, role: 'vendor' }, process.env.JWT_SECRET, { expiresIn: '1d' });
-    res.json({ token });
+    const token = jwt.sign({ id: vendor._id }, process.env.JWT_SECRET, { expiresIn: '1d' });
+
+    res.json({ token, vendor });
   } catch (err) {
-    res.status(500).json({ message: 'Server error' });
+    res.status(500).json({ message: 'Login failed', error: err.message });
   }
 };
 
-// Get Vendor Profile
-exports.getVendorProfile = (req, res) => {
-  res.json(req.user);
+// 👤 Vendor Profile
+exports.getVendorProfile = async (req, res) => {
+  try {
+    const vendor = await StreetVendor.findById(req.user._id).select('-password');
+    res.json(vendor);
+  } catch (err) {
+    res.status(500).json({ message: 'Failed to fetch profile' });
+  }
 };
 
-// Add a todo item
-exports.addTodoItem = async (req, res) => {
+// ✅ Get Todos
+exports.getTodos = async (req, res) => {
+  try {
+    const todos = await VendorTodo.findOne({ vendorId: req.user._id });
+    res.json(todos || { items: [] });
+  } catch (err) {
+    res.status(500).json({ message: 'Failed to fetch todos' });
+  }
+};
+
+// ✅ Add Todo
+exports.addTodo = async (req, res) => {
   try {
     const { productName, quantity } = req.body;
-    const vendorId = req.user._id;
+    if (!productName || !productName.trim()) {
+      return res.status(400).json({ error: 'Product name is required' });
+    }
 
-    let todo = await VendorTodo.findOne({ vendorId });
-    if (!todo) todo = new VendorTodo({ vendorId, items: [] });
+    let vendorTodo = await VendorTodo.findOne({ vendorId: req.user._id });
 
-    todo.items.push({ productName, quantity });
-    await todo.save();
+    if (!vendorTodo) {
+      vendorTodo = new VendorTodo({ vendorId: req.user._id, items: [] });
+    }
 
-    res.status(201).json(todo);
+    vendorTodo.items.push({ productName, quantity });
+    await vendorTodo.save();
+
+    res.status(201).json(vendorTodo);
   } catch (err) {
-    res.status(500).json({ message: 'Error adding todo item', error: err.message });
+    console.error('Error in addTodo:', err);
+    res.status(500).json({ error: 'Internal Server Error' });
   }
 };
 
-// Get todo items
-exports.getTodoItems = async (req, res) => {
+// ✅ Delete Todo
+exports.deleteTodo = async (req, res) => {
   try {
-    const todo = await VendorTodo.findOne({ vendorId: req.user._id });
-    res.json(todo || { items: [] });
+    await VendorTodo.updateOne(
+      { vendorId: req.user._id },
+      { $pull: { items: { _id: req.params.id } } }
+    );
+    res.json({ message: 'Item deleted' });
   } catch (err) {
-    res.status(500).json({ message: 'Error fetching todo items', error: err.message });
+    res.status(500).json({ message: 'Failed to delete item' });
   }
 };
 
-// Update todo item
-exports.updateTodoItem = async (req, res) => {
+// ✅ Clear All Todos
+exports.clearTodos = async (req, res) => {
   try {
-    const { id } = req.params;
-    const { status, reviewGiven } = req.body;
-
-    const todo = await VendorTodo.findOne({ vendorId: req.user._id });
-    if (!todo) return res.status(404).json({ message: 'Todo not found' });
-
-    const item = todo.items.id(id);
-    if (!item) return res.status(404).json({ message: 'Item not found' });
-
-    if (status) item.status = status;
-    if (reviewGiven !== undefined) item.reviewGiven = reviewGiven;
-
-    await todo.save();
-    res.json(todo);
+    await VendorTodo.updateOne(
+      { vendorId: req.user._id },
+      { $set: { items: [] } }
+    );
+    res.json({ message: 'All items deleted' });
   } catch (err) {
-    res.status(500).json({ message: 'Error updating todo item', error: err.message });
+    res.status(500).json({ message: 'Failed to clear items' });
   }
 };
 
-// Delete a todo item
-exports.deleteTodoItem = async (req, res) => {
+// ✅ Get Deliveries
+exports.getDeliveries = async (req, res) => {
   try {
-    const { id } = req.params;
-    const todo = await VendorTodo.findOne({ vendorId: req.user._id });
-    if (!todo) return res.status(404).json({ message: 'Todo not found' });
-
-    todo.items = todo.items.filter(item => item._id.toString() !== id);
-    await todo.save();
-
-    res.json(todo);
+    const deliveries = await Delivery.find({ vendorId: req.user._id }).populate('productId');
+    res.json({ deliveries });
   } catch (err) {
-    res.status(500).json({ message: 'Error deleting todo item', error: err.message });
+    res.status(500).json({ message: 'Failed to fetch deliveries' });
   }
 };
 
-// Delete all todo items
-exports.deleteAllTodoItems = async (req, res) => {
+// ✅ Mark Delivery as Reached
+exports.markReached = async (req, res) => {
   try {
-    await VendorTodo.deleteMany({ vendorId: req.user._id });
-    res.json({ message: 'All todo items deleted successfully' });
+    const delivery = await Delivery.findById(req.params.id);
+    if (!delivery) return res.status(404).json({ message: 'Delivery not found' });
+
+    delivery.status = 'delivered';
+    delivery.deliveryDate = new Date();
+    await delivery.save();
+
+    await VendorTodo.updateOne(
+      { vendorId: req.user._id, 'items.shopProductId': delivery.productId },
+      { $set: { 'items.$.status': 'delivered' } }
+    );
+
+    res.json({ message: 'Marked as delivered' });
   } catch (err) {
-    res.status(500).json({ message: 'Error deleting all todo items', error: err.message });
+    res.status(500).json({ message: 'Failed to mark delivery as reached' });
   }
 };
 
-// Add a review and update product's average rating
+// ✅ Add Review
 exports.addReview = async (req, res) => {
   try {
-    const { productId, rating, comment, productQuality } = req.body;
+    const { productId, rating, comment, productQuality, shopId } = req.body;
 
-    // Save review
     const review = await Review.create({
       vendorId: req.user._id,
       productId,
+      shopId,
       rating,
       comment,
       productQuality,
     });
 
-    // Update product's average rating
     const reviews = await Review.find({ productId });
-    const total = reviews.reduce((sum, r) => sum + r.rating, 0);
-    const avg = total / reviews.length;
+    const avgRating = reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length;
 
-    await Product.findByIdAndUpdate(productId, { averageRating: avg });
+    await Product.findByIdAndUpdate(productId, { averageRating: avgRating });
 
-    // Update the item to mark review given
     await VendorTodo.updateOne(
-      { vendorId: req.user._id, "items.shopProductId": productId },
-      { $set: { "items.$.reviewGiven": true } }
+      { vendorId: req.user._id, 'items.shopProductId': productId },
+      { $set: { 'items.$.reviewGiven': true } }
     );
 
     res.status(201).json(review);
   } catch (err) {
     res.status(500).json({ message: 'Error adding review', error: err.message });
-  }
-};
-
-// Get delivery by ID
-exports.getDeliveryById = async (req, res) => {
-  try {
-    const { deliveryId } = req.params;
-    const delivery = await Delivery.findOne({ _id: deliveryId, vendorId: req.user._id });
-    if (!delivery) return res.status(404).json({ message: 'Delivery not found' });
-    res.json({ delivery });
-  } catch (err) {
-    res.status(500).json({ message: 'Server error fetching delivery', error: err.message });
-  }
-};
-
-// Update delivery status
-exports.updateDeliveryStatus = async (req, res) => {
-  try {
-    const { deliveryId } = req.params;
-    const { status } = req.body;
-
-    const delivery = await Delivery.findOne({ _id: deliveryId, vendorId: req.user._id });
-    if (!delivery) return res.status(404).json({ message: 'Delivery not found' });
-
-    delivery.status = status;
-    await delivery.save();
-
-    res.json({ delivery });
-  } catch (err) {
-    res.status(500).json({ message: 'Server error updating delivery status', error: err.message });
-  }
-};
-
-// Confirm delivery reached and update todo item status
-exports.confirmDeliveryReached = async (req, res) => {
-  try {
-    const { id } = req.params;
-
-    const delivery = await Delivery.findOne({ _id: id, vendorId: req.user._id });
-    if (!delivery) return res.status(404).json({ message: 'Delivery not found' });
-
-    delivery.status = 'reached';
-    delivery.reachedAt = new Date();
-    await delivery.save();
-
-    // Also update the todo item's status
-    await VendorTodo.updateOne(
-      { vendorId: req.user._id, "items.shopProductId": delivery.productId },
-      { $set: { "items.$.status": "reached" } }
-    );
-
-    res.json({ message: 'Delivery marked as reached' });
-  } catch (err) {
-    res.status(500).json({ message: 'Server error confirming delivery reached', error: err.message });
-  }
-};
-
-
-// Get all deliveries for the vendor
-exports.getAllDeliveries = async (req, res) => {
-  try {
-    const deliveries = await Delivery.find({ vendorId: req.user._id });
-    res.json({ deliveries });
-  } catch (err) {
-    res.status(500).json({ message: 'Server error fetching deliveries', error: err.message });
   }
 };

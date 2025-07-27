@@ -17,33 +17,7 @@ const ProductDashboard = ({ products, setProducts }) => {
       return 0;
     });
 
-  const handleAccept = async () => {
-    const qty = parseInt(acceptQty);
-    if (!qty || qty <= 0 || qty > selectedProduct.quantity) return;
-
-    try {
-      const res = await API.patch(`/products/accept/${selectedProduct._id}`, {
-        acceptedQuantity: qty,
-      });
-
-      const updated = res.data;
-
-      if (updated.quantity === 0) {
-        setProducts((prev) =>
-          prev.filter((p) => p._id !== selectedProduct._id)
-        );
-      } else {
-        setProducts((prev) =>
-          prev.map((p) => (p._id === updated._id ? updated : p))
-        );
-      }
-
-      setSelectedProduct(null);
-      setAcceptQty("");
-    } catch (err) {
-      console.error("Error accepting product:", err);
-    }
-  };
+  
 
   return (
     <section>
@@ -96,55 +70,15 @@ const ProductDashboard = ({ products, setProducts }) => {
                   </p>
                 </div>
               </div>
-              <button
-                onClick={() => {
-                  setSelectedProduct(p);
-                  setAcceptQty("");
-                }}
-                className="mt-3 md:mt-0 bg-blue-600 hover:bg-blue-700 text-white px-4 py-1.5 rounded-md text-sm"
-              >
-                Accept
-              </button>
             </li>
           ))}
         </ul>
       )}
 
-      {/* Modal */}
-      <Dialog open={!!selectedProduct} onClose={() => setSelectedProduct(null)} className="fixed z-50 inset-0 overflow-y-auto">
-        <div className="flex items-center justify-center min-h-screen bg-black bg-opacity-50 p-4">
-          <Dialog.Panel className="bg-gray-800 p-6 rounded-lg w-full max-w-md">
-            <Dialog.Title className="text-lg font-semibold text-white mb-4">
-              Accept Product: {selectedProduct?.name}
-            </Dialog.Title>
-            <input
-              type="number"
-              min={1}
-              max={selectedProduct?.quantity}
-              value={acceptQty}
-              onChange={(e) => setAcceptQty(e.target.value)}
-              placeholder={`Max: ${selectedProduct?.quantity}`}
-              className="w-full px-4 py-2 mb-4 rounded-md bg-gray-700 text-white border border-gray-600"
-            />
-            <div className="flex justify-end gap-3">
-              <button
-                onClick={() => setSelectedProduct(null)}
-                className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleAccept}
-                className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded"
-              >
-                Confirm Accept
-              </button>
-            </div>
-          </Dialog.Panel>
-        </div>
-      </Dialog>
+      
     </section>
   );
 };
 
 export default ProductDashboard;
+ 

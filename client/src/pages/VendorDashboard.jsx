@@ -1,18 +1,18 @@
-import React, { useEffect, useState } from 'react';
-import API from '../api';
-import { useNavigate } from 'react-router-dom';
-import { Plus, ClipboardList, Trash2, PackageX, LogOut } from 'lucide-react';
+import React, { useEffect, useState } from "react";
+import API from "../api";
+import { useNavigate } from "react-router-dom";
+import { Plus, ClipboardList, Trash2, PackageX, LogOut } from "lucide-react";
 
 const VendorDashboard = () => {
   const [todos, setTodos] = useState([]);
-  const [newItem, setNewItem] = useState({ productName: '', quantity: 1 });
+  const [newItem, setNewItem] = useState({ productName: "", quantity: 1 });
   const [error, setError] = useState("");
   const [info, setInfo] = useState("");
   const navigate = useNavigate();
 
   const loadTodos = async () => {
     try {
-      const res = await API.get('/vendor/todo');
+      const res = await API.get("/vendor/todo");
       setTodos(res.data.items || []);
     } catch (err) {
       console.error(err);
@@ -26,8 +26,8 @@ const VendorDashboard = () => {
       return;
     }
     try {
-      await API.post('/vendor/todo', newItem);
-      setNewItem({ productName: '', quantity: 1 });
+      await API.post("/vendor/todo", newItem);
+      setNewItem({ productName: "", quantity: 1 });
       loadTodos();
     } catch (err) {
       console.error(err);
@@ -48,7 +48,7 @@ const VendorDashboard = () => {
     const confirmDelete = window.confirm("Are you sure you want to delete all items?");
     if (confirmDelete) {
       try {
-        await API.delete('/vendor/todo');
+        await API.delete("/vendor/todo");
         setTodos([]);
       } catch (error) {
         console.error("Failed to delete all items:", error);
@@ -62,11 +62,14 @@ const VendorDashboard = () => {
     if (!confirm) return;
 
     try {
-      const deliveryRes = await API.get('/vendor/deliveries');
+      const deliveryRes = await API.get("/vendor/deliveries");
       const deliveries = deliveryRes.data.deliveries || [];
 
+      const itemProductId = item.shopProductId?._id || item.shopProductId;
       const matchingDelivery = deliveries.find(
-        (d) => d.productId === item.shopProductId && d.status === 'started_to_deliver'
+        (d) =>
+          (d.productId?._id || d.productId) === itemProductId &&
+          d.status === "started_to_deliver"
       );
 
       if (!matchingDelivery) {
@@ -76,24 +79,24 @@ const VendorDashboard = () => {
 
       await API.patch(`/vendor/delivery/${matchingDelivery._id}/reached`);
 
-      // Ask for review inline instead of navigating
       const rating = prompt("Please rate the product (1-5 stars):");
       if (!rating || isNaN(rating) || rating < 1 || rating > 5) {
         alert("Invalid rating. Review not submitted.");
         return;
       }
+
       const comment = prompt("Any comments or suggestions?") || "";
 
-      await API.post('/vendor/review', {
-        productId: matchingDelivery.productId,
+      await API.post("/vendor/review", {
+        productId: matchingDelivery.productId._id || matchingDelivery.productId,
+        shopId: matchingDelivery.shopId,
         rating: Number(rating),
         comment,
-        productQuality: 'good'
+        productQuality: "good",
       });
 
       alert("Review submitted successfully.");
       loadTodos();
-
     } catch (err) {
       console.error("Error confirming delivery:", err);
       alert("Failed to confirm delivery");
@@ -143,7 +146,9 @@ const VendorDashboard = () => {
             placeholder="Product Name"
             className="bg-gray-700 text-white border border-gray-600 focus:border-blue-400 rounded-lg px-4 py-2 w-full md:w-1/2"
             value={newItem.productName}
-            onChange={(e) => setNewItem({ ...newItem, productName: e.target.value })}
+            onChange={(e) =>
+              setNewItem({ ...newItem, productName: e.target.value })
+            }
           />
           <input
             type="number"
@@ -151,7 +156,9 @@ const VendorDashboard = () => {
             placeholder="Quantity"
             className="bg-gray-700 text-white border border-gray-600 focus:border-blue-400 rounded-lg px-4 py-2 w-full md:w-1/4"
             value={newItem.quantity}
-            onChange={(e) => setNewItem({ ...newItem, quantity: parseInt(e.target.value) })}
+            onChange={(e) =>
+              setNewItem({ ...newItem, quantity: parseInt(e.target.value) })
+            }
           />
           <button
             onClick={addTodo}
@@ -178,9 +185,13 @@ const VendorDashboard = () => {
                 className="flex justify-between items-center bg-gray-700 border border-gray-600 px-4 py-3 rounded-lg shadow-sm transition hover:bg-gray-600"
               >
                 <div>
-                  <span className="font-semibold text-lg">{item.productName}</span>
-                  <div className="text-sm text-gray-300">Qty: {item.quantity}</div>
-                  {item.status === 'started_to_deliver' && !item.reviewGiven && (
+                  <span className="font-semibold text-lg">
+                    {item.productName}
+                  </span>
+                  <div className="text-sm text-gray-300">
+                    Qty: {item.quantity}
+                  </div>
+                  {item.status === "started_to_deliver" && !item.reviewGiven && (
                     <div className="mt-1 flex gap-2">
                       <button
                         className="text-sm text-green-400 underline"
@@ -190,14 +201,20 @@ const VendorDashboard = () => {
                       </button>
                       <button
                         className="text-sm text-red-400 underline"
-                        onClick={() => alert('Marking as not received. Please contact middleman.')}
+                        onClick={() =>
+                          alert(
+                            "Marking as not received. Please contact middleman."
+                          )
+                        }
                       >
                         Not Received
                       </button>
                     </div>
                   )}
                   {item.reviewGiven && (
-                    <div className="text-sm text-yellow-300 mt-1">✅ Received and Reviewed</div>
+                    <div className="text-sm text-yellow-300 mt-1">
+                      ✅ Received and Reviewed
+                    </div>
                   )}
                 </div>
 
